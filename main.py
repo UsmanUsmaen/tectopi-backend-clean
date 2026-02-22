@@ -5,7 +5,7 @@ import os
 
 app = FastAPI(title="TECTOPI Backend")
 
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+client = OpenAI()   # API key auto-read from environment
 
 class ChatRequest(BaseModel):
     message: str
@@ -20,16 +20,24 @@ def health():
 
 @app.post("/ai/chat")
 def chat(req: ChatRequest):
+    try:
+        completion = client.chat.completions.create(
+            model="gpt-4.1-mini",
+            messages=[
+                {"role": "system", "content": "You are TECTOPI AI helping with education and financial inclusion in Africa."},
+                {"role": "user", "content": req.message}
+            ]
+        )
 
-    completion = client.chat.completions.create(
-        model="gpt-4.1-mini",
-        messages=[
-            {"role": "system", "content": "You are TECTOPI AI. You help with education, finance and sustainability guidance for African communities."},
-            {"role": "user", "content": req.message}
-        ]
-    )
+        return {
+            "response": completion.choices[0].message.content,
+            "mode": "real-ai"
+        }
 
-    return {
-        "response": completion.choices[0].message.content,
-        "mode": "real-ai"
-    }
+    except Exception as e:
+        # This prints the real error into Railway logs
+        print("AI ERROR:", str(e))
+        return {
+            "error": "AI request failed",
+            "details": str(e)
+        }
